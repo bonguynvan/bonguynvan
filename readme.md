@@ -1,1 +1,1 @@
-(https://github-readme-stats.vercel.app/api?username=bonguynvan)](https://github.com/bonguynvan/bonguynvan)
+![Bonguynvan's GitHub stats](https://github-readme-stats.vercel.app/api?username=bonguynvan&hide=contribs,prs)
