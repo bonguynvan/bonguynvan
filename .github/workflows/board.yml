@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [master]
-    paths: [scripts/board.mjs, assets/cat.webp]
+    paths: [scripts/board.mjs, assets/cat/**, assets/floor/**]
 
 permissions:
   contents: write

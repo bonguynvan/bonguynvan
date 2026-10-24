@@ -27,27 +27,12 @@ They also trade on their own little exchange:
 ! BCN          0     0    0.0%       -   dev      beacon-parser · analytics tag QA
 - BUG      9999+    -1   -0.0%       -   main     bugs · one fewer every day
 ```
-<!-- board:end -->
 
 <sub>LAST is stars, CHG is new stars in the last 7 days, VOL is downloads last week on npm or
 crates.io. Refreshed every morning, Vietnam time. Not investment advice.</sub>
 
-**Listings**
-
-- **TCV** · [TradeCanvas](https://github.com/bonguynvan/tradecanvas): trading charts for the web,
-  on Canvas 2D or WebGL, with no dependencies. Indicators, drawing tools, live feeds and orders on
-  the chart. Live demo at [tradecanvas.dev](https://tradecanvas.dev).
-- **BOG** · [bo-grid](https://github.com/bonguynvan/bo-grid): a fast Svelte 5 data grid for live
-  price boards, with a web component for other frameworks.
-- **DSA** · [densa](https://github.com/densa-rs/densa): a Rust toolkit for apps that show a lot of
-  live data: live Arrow tables, a GPU data grid and charts, widgets and docking. Try it in
-  [densa studio](https://github.com/densa-rs/densa-studio).
-- **FSP** · [Fansipan](https://github.com/bonguynvan/fansipan): an open-source desktop trading
-  terminal for securities, for any market and any broker. Rust, Tauri and Svelte.
-- **SVT** · [Sveltier](https://github.com/sveltier/sveltier): a UI framework for Svelte 5,
-  designed to be easy for AI coding agents to use. Still alpha.
-- **BCN** · [beacon-parser](https://github.com/bonguynvan/beacon-parser): parse, assert and diff
-  Adobe Analytics hits in Playwright tests.
+<p align="center"><img src="assets/floor/chill.webp" width="480" alt="Live from the trading floor: the desk is calm."><br><sub>Live from the trading floor: the desk is calm.</sub></p>
+<!-- board:end -->
 
 You can find me at [bonv.dev](https://bonv.dev). If any of this is useful to you, a star moves
 the board, and [sponsoring](https://github.com/sponsors/bonguynvan) keeps the exchange open.

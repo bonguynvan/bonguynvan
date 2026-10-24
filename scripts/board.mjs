@@ -129,6 +129,31 @@ function trendOf({ last, chg }) {
   return chg > 0 ? 'up' : chg < 0 ? 'down' : 'ref'
 }
 
+// ---------------------------------------------------------------- the cat
+//
+// The cat in the header reacts to the week's BO-INDEX (assets/cat/), and the
+// trading floor under the board shows how the desk takes it (assets/floor/).
+
+const PARTY = 0.2
+
+function moodOf(index) {
+  const previous = index.last - index.chg
+  const gain = previous > 0 ? index.chg / previous : index.chg > 0 ? 1 : 0
+  if (index.trend === 'floor') return 'rage'
+  if (index.trend === 'down') return 'cry'
+  if (index.trend === 'ref') return 'sleepy'
+  return gain >= PARTY ? 'party' : 'happy'
+}
+
+const FLOOR_CAPTIONS = {
+  chill: 'Live from the trading floor: the desk is calm.',
+  rage: 'Live from the trading floor: the desk has seen the chart.',
+}
+
+function floorOf(index) {
+  return index.chg < 0 ? 'rage' : 'chill'
+}
+
 // ---------------------------------------------------------------- formatting
 
 const ARROWS = { ceiling: '▲', up: '▲', ref: '■', down: '▼', floor: '▼' }
@@ -180,6 +205,8 @@ function quoteRow(quote) {
 }
 
 function renderBoard(quotes, index, session) {
+  const floor = floorOf(index)
+  const caption = FLOOR_CAPTIONS[floor]
   return [
     '```diff',
     `@@ BO EXCHANGE · SESSION ${session} · OPEN 24/7 @@`,
@@ -188,6 +215,11 @@ function renderBoard(quotes, index, session) {
     ...quotes.map(quoteRow),
     boardRow('-', ['BUG', '9999+', '-1', '-0.0%', '-', 'main', 'bugs · one fewer every day']),
     '```',
+    '',
+    '<sub>LAST is stars, CHG is new stars in the last 7 days, VOL is downloads last week on npm or',
+    'crates.io. Refreshed every morning, Vietnam time. Not investment advice.</sub>',
+    '',
+    `<p align="center"><img src="assets/floor/${floor}.webp" width="480" alt="${caption}"><br><sub>${caption}</sub></p>`,
   ].join('\n')
 }
 
@@ -256,7 +288,7 @@ function renderTape(theme, items, width) {
   }
 }
 
-function renderHeader(theme, quotes, index, cat) {
+function renderHeader(theme, quotes, index, mood, cat) {
   const W = 900
   const H = 232
   const STRIP = 188
@@ -264,7 +296,7 @@ function renderHeader(theme, quotes, index, cat) {
   const sans = `font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif"`
   const tape = renderTape(theme, [index, ...quotes], W)
   const gridLines = Array.from({ length: Math.floor(W / 36) }, (_, i) => `<line x1="${i * 36 + 18}" x2="${i * 36 + 18}" y1="0" y2="${STRIP}"/>`).join('')
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Nguyen Bo: open-source tools for apps full of live data">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Nguyen Bo: open-source tools for apps full of live data. BO-INDEX ${index.last}, ${escapeXml(signed(index.chg))} this week, and a ${mood} cat.">
 <style>
 .candle{animation:rise .5s ease-out both;transform-box:fill-box;transform-origin:bottom}
 @keyframes rise{from{opacity:0;transform:scaleY(.2)}}
@@ -290,7 +322,7 @@ ${tape.css}
 <text x="524" y="45" ${mono} font-size="15" font-weight="700" fill="${theme.text}">${index.last}</text>
 <text x="${532 + String(index.last).length * 9}" y="45" ${mono} font-size="13" fill="${theme[index.trend]}">${ARROWS[index.trend]} ${escapeXml(signed(index.chg))} (${escapeXml(percent(index))})</text>
 ${renderCandles(theme, { x: 452, y: 62, w: 250, h: 104 })}
-<image class="cat" href="${cat}" x="712" y="22" width="178" height="170"/>
+<image class="cat" href="${cat}" x="700" y="14" width="196" height="184" preserveAspectRatio="xMidYMax meet"/>
 <rect y="${STRIP}" width="${W}" height="${H - STRIP}" fill="${theme.strip}"/>
 <line x1="0" x2="${W}" y1="${STRIP}" y2="${STRIP}" stroke="${theme.grid}"/>
 <g transform="translate(24 ${STRIP + 27})" ${mono} font-size="13">${tape.svg}</g>
@@ -335,12 +367,13 @@ async function main() {
   const board = renderBoard(quotes, index, today)
   const nextReadme = `${readme.slice(0, start + BOARD_START.length)}\n${board}\n${readme.slice(end)}`
 
-  const cat = `data:image/webp;base64,${(await readFile('assets/cat.webp')).toString('base64')}`
+  const mood = moodOf(index)
+  const cat = `data:image/webp;base64,${(await readFile(`assets/cat/${mood}.webp`)).toString('base64')}`
   const changed = await Promise.all([
     writeIfChanged(README, nextReadme, (a, b) => withoutSession(a) === withoutSession(b)),
     writeIfChanged(HISTORY, `${JSON.stringify(nextHistory(history, today, weekAgo, quotes), null, 2)}\n`),
     ...Object.entries(THEMES).map(([name, theme]) =>
-      writeIfChanged(`assets/board-${name}.svg`, renderHeader(theme, quotes, index, cat))),
+      writeIfChanged(`assets/board-${name}.svg`, renderHeader(theme, quotes, index, mood, cat))),
   ])
   console.log(changed.some(Boolean) ? 'Board updated.' : 'Board unchanged.')
   console.log(board)
