@@ -1,0 +1,39 @@
+name: Price board
+
+on:
+  schedule:
+    - cron: '0 1 * * *' # 08:00 in Vietnam
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths: [scripts/board.mjs, assets/cat.webp]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: board
+  cancel-in-progress: false
+
+jobs:
+  board:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/board.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit the new board
+        run: |
+          git add readme.md assets
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: refresh price board"
+          git push
