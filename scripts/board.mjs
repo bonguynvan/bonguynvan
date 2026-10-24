@@ -1,8 +1,9 @@
 // Refreshes the price board in readme.md and the header images in assets/
 // from GitHub, npm and crates.io. Run by .github/workflows/board.yml each day.
 //
-//   LAST  stars        CHG  stars gained since 7 days ago (see data/stars.json)
-//   VOL   downloads in the last week, from npm or crates.io
+//   STARS         stars
+//   +7D           stars gained since 7 days ago (data/stars.json)
+//   DOWNLOADS/WK  downloads in the last week, from npm or crates.io
 //
 // Colours follow Vietnamese price boards: purple at the ceiling (+7% or
 // more), green up, yellow at the reference price, red down, cyan at the floor.
@@ -136,12 +137,20 @@ function trendOf({ last, chg }) {
 
 const PARTY = 0.2
 
-function moodOf(index) {
+// Vietnamese exchanges close on Saturday and Sunday.
+function isWeekend(session) {
+  const day = new Date(`${session}T12:00:00Z`).getUTCDay()
+  return day === 0 || day === 6
+}
+
+// A flat week leaves the cat minding the desk (idle, animated), or asleep at
+// the weekend.
+function moodOf(index, session) {
   const previous = index.last - index.chg
   const gain = previous > 0 ? index.chg / previous : index.chg > 0 ? 1 : 0
   if (index.trend === 'floor') return 'rage'
   if (index.trend === 'down') return 'cry'
-  if (index.trend === 'ref') return 'sleepy'
+  if (index.trend === 'ref') return isWeekend(session) ? 'sleepy' : 'idle'
   return gain >= PARTY ? 'party' : 'happy'
 }
 
@@ -181,15 +190,15 @@ function escapeXml(text) {
 // ---------------------------------------------------------------- readme board
 
 function boardRow(sign, cells) {
-  const [code, last, chg, pct, vol, version, listing] = cells
+  const [code, stars, week, pct, downloads, version, listing] = cells
   return [
     sign,
     ' ',
     code.padEnd(9),
-    last.padStart(5),
-    chg.padStart(6),
+    stars.padStart(5),
+    week.padStart(6),
     pct.padStart(8),
-    vol.padStart(8),
+    downloads.padStart(14),
     '   ',
     version.padEnd(9),
     listing,
@@ -210,16 +219,15 @@ function renderBoard(quotes, index, session) {
   return [
     '```diff',
     `@@ BO EXCHANGE · SESSION ${session} · OPEN 24/7 @@`,
-    boardRow(' ', ['CODE', 'LAST', 'CHG', '%', 'VOL/WK', 'VER', 'LISTING']),
+    boardRow(' ', ['CODE', 'STARS', '+7D', '%', 'DOWNLOADS/WK', 'VER', 'LISTING']),
     quoteRow(index),
     ...quotes.map(quoteRow),
     boardRow('-', ['BUG', '9999+', '-1', '-0.0%', '-', 'main', 'bugs · one fewer every day']),
     '```',
     '',
-    '<sub>LAST is stars, CHG is new stars in the last 7 days, VOL is downloads last week on npm or',
-    'crates.io. Refreshed every morning, Vietnam time. Not investment advice.</sub>',
+    '<sub>Refreshed every morning, Vietnam time. Not investment advice.</sub>',
     '',
-    `<p align="center"><img src="assets/floor/${floor}.webp" width="480" alt="${caption}"><br><sub>${caption}</sub></p>`,
+    `<p align="center"><img src="assets/floor/${floor}.webp" width="480" alt="${caption}"></p>`,
   ].join('\n')
 }
 
@@ -367,7 +375,7 @@ async function main() {
   const board = renderBoard(quotes, index, today)
   const nextReadme = `${readme.slice(0, start + BOARD_START.length)}\n${board}\n${readme.slice(end)}`
 
-  const mood = moodOf(index)
+  const mood = moodOf(index, today)
   const cat = `data:image/webp;base64,${(await readFile(`assets/cat/${mood}.webp`)).toString('base64')}`
   const changed = await Promise.all([
     writeIfChanged(README, nextReadme, (a, b) => withoutSession(a) === withoutSession(b)),
