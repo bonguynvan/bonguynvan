@@ -8,11 +8,10 @@
 I'm a developer in Vietnam. I've spent most of my career on securities trading platforms, and
 these days I mostly work on open-source tools for apps that show a lot of live data.
 
-I build with AI agents every day, mostly [Claude Code](https://claude.com/claude-code): it
-writes a lot of the code, I decide what gets built and what ships. So my projects are made for
-agents too: most come with `llms.txt`, agent skills and, for TradeCanvas, an MCP server.
+<img src="assets/claude.svg" width="16" height="16" alt="Claude"> I build with
+[Claude Code](https://claude.com/claude-code) every day. Thank you, Claude.
 
-They also trade on their own little exchange:
+My projects trade on their own little exchange:
 
 <!-- board:start -->
 ```diff
