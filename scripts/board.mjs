@@ -38,23 +38,38 @@ const THEMES = {
 
 // ---------------------------------------------------------------- data
 
+class HttpError extends Error {
+  constructor(res, url, body) {
+    super(`${res.status} ${res.statusText}: ${url}\n${body.slice(0, 300)}`)
+    this.status = res.status
+  }
+}
+
 async function getJson(url, headers = {}) {
   const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT, ...headers } })
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${url}`)
+  if (!res.ok) throw new HttpError(res, url, await res.text())
   return res.json()
 }
 
-function githubHeaders(accept = 'application/vnd.github+json') {
+// The Actions token may not list another repository's stargazers (403);
+// that list is public, so ask again without the token.
+async function getGithub(url, accept = 'application/vnd.github+json') {
   const token = process.env.GITHUB_TOKEN
-  return { Accept: accept, ...(token && { Authorization: `Bearer ${token}` }) }
+  if (!token) return getJson(url, { Accept: accept })
+  try {
+    return await getJson(url, { Accept: accept, Authorization: `Bearer ${token}` })
+  } catch (error) {
+    if (error.status !== 403) throw error
+    return getJson(url, { Accept: accept })
+  }
 }
 
 async function fetchStars(repo, since) {
-  const { stargazers_count: total } = await getJson(`https://api.github.com/repos/${repo}`, githubHeaders())
+  const { stargazers_count: total } = await getGithub(`https://api.github.com/repos/${repo}`)
   let recent = 0
   for (let page = 1; (page - 1) * 100 < total; page++) {
     const url = `https://api.github.com/repos/${repo}/stargazers?per_page=100&page=${page}`
-    const stars = await getJson(url, githubHeaders('application/vnd.github.star+json'))
+    const stars = await getGithub(url, 'application/vnd.github.star+json')
     recent += stars.filter((star) => Date.parse(star.starred_at) >= since).length
   }
   return { last: total, chg: recent }
