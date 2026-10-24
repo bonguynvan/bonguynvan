@@ -28,7 +28,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Commit the new board
         run: |
-          git add readme.md assets
+          git add readme.md assets data
           if git diff --cached --quiet; then
             echo "Nothing to commit."
             exit 0

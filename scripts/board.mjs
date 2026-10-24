@@ -1,13 +1,14 @@
 // Refreshes the price board in readme.md and the header images in assets/
 // from GitHub, npm and crates.io. Run by .github/workflows/board.yml each day.
 //
-//   LAST  stars        CHG  new stars in the last 7 days
+//   LAST  stars        CHG  stars gained since 7 days ago (see data/stars.json)
 //   VOL   downloads in the last week, from npm or crates.io
 //
 // Colours follow Vietnamese price boards: purple at the ceiling (+7% or
 // more), green up, yellow at the reference price, red down, cyan at the floor.
 
-import { readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname } from 'node:path'
 
 const LISTINGS = [
   { code: 'TCV', name: 'TradeCanvas', repo: 'bonguynvan/tradecanvas', npm: '@tradecanvas/chart', note: 'trading charts' },
@@ -19,6 +20,7 @@ const LISTINGS = [
 ]
 
 const README = 'readme.md'
+const HISTORY = 'data/stars.json'
 const BOARD_START = '<!-- board:start -->'
 const BOARD_END = '<!-- board:end -->'
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
@@ -51,28 +53,13 @@ async function getJson(url, headers = {}) {
   return res.json()
 }
 
-// The Actions token may not list another repository's stargazers (403);
-// that list is public, so ask again without the token.
-async function getGithub(url, accept = 'application/vnd.github+json') {
+async function fetchStars(repo) {
   const token = process.env.GITHUB_TOKEN
-  if (!token) return getJson(url, { Accept: accept })
-  try {
-    return await getJson(url, { Accept: accept, Authorization: `Bearer ${token}` })
-  } catch (error) {
-    if (error.status !== 403) throw error
-    return getJson(url, { Accept: accept })
-  }
-}
-
-async function fetchStars(repo, since) {
-  const { stargazers_count: total } = await getGithub(`https://api.github.com/repos/${repo}`)
-  let recent = 0
-  for (let page = 1; (page - 1) * 100 < total; page++) {
-    const url = `https://api.github.com/repos/${repo}/stargazers?per_page=100&page=${page}`
-    const stars = await getGithub(url, 'application/vnd.github.star+json')
-    recent += stars.filter((star) => Date.parse(star.starred_at) >= since).length
-  }
-  return { last: total, chg: recent }
+  const { stargazers_count: stars } = await getJson(`https://api.github.com/repos/${repo}`, {
+    Accept: 'application/vnd.github+json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+  })
+  return stars
 }
 
 async function fetchNpm(pkg) {
@@ -90,13 +77,43 @@ async function fetchCrate(name, since) {
   return { version: crate.max_stable_version ?? crate.max_version, vol }
 }
 
-async function fetchQuote(listing, since) {
-  const [stars, release] = await Promise.all([
-    fetchStars(listing.repo, since),
+async function fetchQuote(listing, since, baseline) {
+  const [last, release] = await Promise.all([
+    fetchStars(listing.repo),
     listing.npm ? fetchNpm(listing.npm) : listing.crate ? fetchCrate(listing.crate, since) : null,
   ])
-  const quote = { ...listing, ...stars, version: release?.version ?? listing.stage, vol: release?.vol ?? null }
+  const chg = last - (baseline?.[listing.code] ?? last)
+  const quote = { ...listing, last, chg, version: release?.version ?? listing.stage, vol: release?.vol ?? null }
   return { ...quote, trend: trendOf(quote) }
+}
+
+// ---------------------------------------------------------------- star history
+//
+// GitHub only lists stargazers to signed-in users, which the Actions token is
+// not, so the change is measured against our own record: data/stars.json
+// holds the star counts on each day they changed.
+
+async function loadHistory() {
+  const text = await readFile(HISTORY, 'utf8').catch((error) => {
+    if (error.code === 'ENOENT') return '{}'
+    throw error
+  })
+  return JSON.parse(text)
+}
+
+// The counts as they stood a week ago: the last record on or before that day.
+function baselineIndex(dates, weekAgo) {
+  const index = dates.findLastIndex((date) => date <= weekAgo)
+  return index >= 0 ? index : 0
+}
+
+function nextHistory(history, today, weekAgo, quotes) {
+  const counts = Object.fromEntries(quotes.map((quote) => [quote.code, quote.last]))
+  const dates = Object.keys(history).sort()
+  const latest = history[dates.at(-1)]
+  const changed = !latest || quotes.some((quote) => latest[quote.code] !== quote.last)
+  const kept = dates.slice(baselineIndex(dates, weekAgo)).map((date) => [date, history[date]])
+  return Object.fromEntries(changed ? [...kept, [today, counts]] : kept)
 }
 
 function indexOf(quotes) {
@@ -295,6 +312,7 @@ function withoutSession(text) {
 async function writeIfChanged(path, next, same = (a, b) => a === b) {
   const current = await readFile(path, 'utf8').catch(() => '')
   if (same(current, next)) return false
+  await mkdir(dirname(path), { recursive: true })
   await writeFile(path, next)
   return true
 }
@@ -302,19 +320,25 @@ async function writeIfChanged(path, next, same = (a, b) => a === b) {
 async function main() {
   const now = new Date()
   const since = now.getTime() - WEEK_MS
-  const quotes = await Promise.all(LISTINGS.map((listing) => fetchQuote(listing, since)))
+  const today = sessionDate(now)
+  const weekAgo = sessionDate(new Date(since))
+  const history = await loadHistory()
+  const dates = Object.keys(history).sort()
+  const baseline = history[dates[baselineIndex(dates, weekAgo)]]
+  const quotes = await Promise.all(LISTINGS.map((listing) => fetchQuote(listing, since, baseline)))
   const index = indexOf(quotes)
 
   const readme = await readFile(README, 'utf8')
   const start = readme.indexOf(BOARD_START)
   const end = readme.indexOf(BOARD_END)
   if (start < 0 || end < start) throw new Error(`${README} has no ${BOARD_START} … ${BOARD_END} block`)
-  const board = renderBoard(quotes, index, sessionDate(now))
+  const board = renderBoard(quotes, index, today)
   const nextReadme = `${readme.slice(0, start + BOARD_START.length)}\n${board}\n${readme.slice(end)}`
 
   const cat = `data:image/webp;base64,${(await readFile('assets/cat.webp')).toString('base64')}`
   const changed = await Promise.all([
     writeIfChanged(README, nextReadme, (a, b) => withoutSession(a) === withoutSession(b)),
+    writeIfChanged(HISTORY, `${JSON.stringify(nextHistory(history, today, weekAgo, quotes), null, 2)}\n`),
     ...Object.entries(THEMES).map(([name, theme]) =>
       writeIfChanged(`assets/board-${name}.svg`, renderHeader(theme, quotes, index, cat))),
   ])
