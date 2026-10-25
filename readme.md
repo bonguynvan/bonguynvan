@@ -16,10 +16,10 @@ My projects trade on their own little exchange:
 ```diff
 @@ BO EXCHANGE · SESSION 2026-10-25 · OPEN 24/7 @@
   CODE     STARS   +7D       %  DOWNLOADS/WK   VER      LISTING
-+ BO-INDEX    36    +4  +12.5%           575            all listings
-+ TCV         28    +3  +12.0%           485   1.44.0   TradeCanvas · trading charts
-+ BOG          8    +1  +14.3%            40   2.9.0    bo-grid · price-board grid
-! DSA          0     0    0.0%            50   0.2.3    densa · live-data toolkit, Rust
++ BO-INDEX    36    +4  +12.5%           578            all listings
++ TCV         28    +3  +12.0%           485   1.47.0   TradeCanvas · trading charts
++ BOG          8    +1  +14.3%            40   3.0.0    bo-grid · price-board grid
+! DSA          0     0    0.0%            53   0.2.3    densa · live-data toolkit, Rust
 ! FSP          0     0    0.0%             -   dev      Fansipan · desktop terminal
 ! SVT          0     0    0.0%             -   alpha    Sveltier · UI kit for AI agents
 ! BCN          0     0    0.0%             -   dev      beacon-parser · analytics tag QA
