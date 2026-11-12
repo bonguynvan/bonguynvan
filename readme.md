@@ -14,10 +14,10 @@ My projects trade on their own little exchange:
 
 <!-- board:start -->
 ```diff
-@@ BO EXCHANGE · SESSION 2026-11-11 · OPEN 24/7 @@
+@@ BO EXCHANGE · SESSION 2026-11-12 · OPEN 24/7 @@
   CODE     STARS   +7D       %  DOWNLOADS/WK   VER      LISTING
-+ BO-INDEX    69   +24  +53.3%          4.5k            all listings
-+ TCV         57   +24  +72.7%          3.4k   1.78.0   TradeCanvas · trading charts
++ BO-INDEX    81   +36  +80.0%          4.5k            all listings
++ TCV         69   +36 +109.1%          3.4k   1.84.1   TradeCanvas · trading charts
 ! BOG          9     0    0.0%          1.1k   3.3.1    bo-grid · price-board grid
 ! DSA          0     0    0.0%            18   0.2.7    densa · live-data toolkit, Rust
 ! FSP          0     0    0.0%             -   dev      Fansipan · desktop terminal
